@@ -17,6 +17,7 @@ import com.sky.service.EmployeeService;
 import com.sky.utils.JwtUtil;
 import com.sky.vo.EmployeeLoginVO;
 import lombok.extern.slf4j.Slf4j;
+import org.mindrot.jbcrypt.BCrypt;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -55,23 +56,28 @@ public class EmployeeServiceImpl implements EmployeeService {
     @Override
     public EmployeeLoginVO login(EmployeeLoginDTO employeeLoginDTO) {
         //接受前端用户名和密码
+
         String username = employeeLoginDTO.getUsername();
         String password = employeeLoginDTO.getPassword();
 
+
         //mapper获取employee 对象
-        Employee employee = employeeMapper.queryEmployeeByUsernameAndPassword(username, password);
+      // Employee employee = employeeMapper.queryEmployeeByUsernameAndPassword(username, password);
+        Employee employee = employeeMapper.getByUsername(username);
 
         //获取属性
         Long id = employee.getId();
         String name = employee.getName();
         String employeeUsername = employee.getUsername();
         String employeePassword = employee.getPassword();
+      //  log.error(employeePassword);
 
         if (id == null) {
             throw new LoginFailedException(MessageConstant.ACCOUNT_NOT_FOUND);
         }
-
-        if (!Objects.equals(employeePassword, password)) {
+       boolean checkpw = BCrypt.checkpw(password, employeePassword);
+        //log.error(String.valueOf(checkpw));
+        if (!checkpw) {
             throw new PasswordErrorException(MessageConstant.PASSWORD_ERROR);
         }
 
@@ -107,22 +113,24 @@ public class EmployeeServiceImpl implements EmployeeService {
         String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
         StringBuilder password = new StringBuilder();
-        Random random = new Random();
-
-        // 生成 6 位密码
-        for (int i = 0; i < 6; i++) {
-            int index = random.nextInt(characters.length());
-            password.append(characters.charAt(index));
+//        Random random = new Random();
+//
+//        // 生成 6 位密码
+        for (int i = 1; i <= 6; i++) {
+          //  int index = random.nextInt(characters.length());
+            password.append(i);
         }
-
-        employee.setPassword(password.toString());
+        String hashpw = BCrypt.hashpw(password.toString(), BCrypt.gensalt());
+        employee.setPassword(hashpw);
 
         employeeMapper.addEmployee(employee);
     }
 
     @Override
     public Employee getEmployeesById(Long id) {
-        return employeeMapper.getEmployeesById(id);
+        Employee employee = employeeMapper.getEmployeesById(id);
+        employee.setPassword("********");
+        return employee;
     }
 
     @Override
